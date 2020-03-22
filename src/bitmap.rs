@@ -83,12 +83,25 @@ pub fn generate_sprite_bitmap() -> Bitmap {
         new_data.extend(row);
     }
     new_data.extend_from_slice(&[0; 5]);
+    bitmap = Bitmap {
+        width: 5,
+        height: 10,
+        data: new_data
+    };
+
     // Add outline
-    // TODO
+    for y in 0..bitmap.height {
+        for x in 0..bitmap.width {
+            let cell = bitmap.get(x, y);
+            if cell == 0 && count_neighbors(&bitmap, x, y) > 0 {
+                *bitmap.get_mut(x, y) = 2; // Mark as outline
+            }
+        }
+    }
 
     // Mirror the data on the OY axis
     let mut mirrored = Vec::with_capacity(10 * 10);
-    for chunk in new_data.chunks(5) {
+    for chunk in bitmap.data.chunks(5) {
         let mut row: Vec<u8> = chunk.iter().rev().cloned().collect();
         row.extend(chunk);
         mirrored.extend(row);
