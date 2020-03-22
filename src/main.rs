@@ -1,5 +1,6 @@
-mod bitmap;
+mod pixel_map;
+
 
 fn main() {
-    let bitmap = bitmap::generate_sprite_bitmap();
+    let pixel_map = pixel_map::generate_sprite_map();
 }
