@@ -1,5 +1,5 @@
 use image::{ImageBuffer, Rgb};
-use rand::{seq::SliceRandom, Rng};
+use rand::seq::SliceRandom;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum PixelType {
@@ -38,11 +38,32 @@ impl PixelMap {
     pub fn get_mut(&mut self, x: usize, y: usize) -> &mut PixelType {
         &mut self.data[y * self.width + x]
     }
+
+    pub fn image(&self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+        let mut img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(self.width as u32, self.height as u32);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let pixel = img.get_pixel_mut(x as u32, y as u32);
+                match self.get(x, y) {
+                    PixelType::Background => {
+                        *pixel = image::Rgb([255, 255, 255]);
+                    }
+                    PixelType::Color => {
+                        *pixel = image::Rgb([0, 255, 0]);
+                    }
+                    PixelType::Outline => {
+                        *pixel = image::Rgb([0, 180, 0]);
+                    }
+                }
+            }
+        }
+        img
+    }
 }
 
 fn count_neighbors(state: &PixelMap, x: usize, y: usize) -> u16 {
     let mut count = 0;
-    if x > 0 && state.get(x, y) == &PixelType::Color {
+    if x > 0 && state.get(x - 1, y) == &PixelType::Color {
         count += 1;
     }
     if y > 0 && state.get(x, y - 1) == &PixelType::Color {
@@ -81,8 +102,6 @@ fn evolve(state: PixelMap) -> PixelMap {
 
 pub fn generate_sprite_map() -> PixelMap {
     // TODO: Remove magic numbers throughout the function
-    // Create a 10x10 matrix of numbers representing the sprite, where a 0 means background,
-    // 1 means fill with color and 2 means outline
     let mut pixel_map = PixelMap::generate(4, 8);
     pixel_map = evolve(evolve(pixel_map));
     // Grow 4x8 pixel map into 5x10 by adding borders on all directions except the mirror direction (left)
@@ -112,10 +131,9 @@ pub fn generate_sprite_map() -> PixelMap {
 
     // Mirror the data on the OY axis
     let mut mirrored = Vec::with_capacity(10 * 10);
-    for mut chunk in pixel_map.data.chunks_mut(5) {
+    for chunk in pixel_map.data.chunks_mut(5) {
         let mut row: Vec<PixelType> = chunk.iter().rev().cloned().collect();
         row.append(&mut Vec::from(chunk));
-        // row.extend(chunk);
         mirrored.extend(row);
     }
     PixelMap {
