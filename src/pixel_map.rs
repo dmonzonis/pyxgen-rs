@@ -1,6 +1,10 @@
 use image::{ImageBuffer, Rgb};
 use rand::seq::SliceRandom;
 
+const GREEN: [u8; 3] = [0, 255, 0];
+const DARK_GREEN: [u8; 3] = [0, 180, 0];
+const WHITE: [u8; 3] = [255, 255, 255];
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum PixelType {
     Background,
@@ -15,7 +19,24 @@ pub struct PixelMap {
 }
 
 impl PixelMap {
-    pub fn generate(width: usize, height: usize) -> PixelMap {
+    fn count_neighbors(&self, x: usize, y: usize) -> u16 {
+        let mut count = 0;
+        if x > 0 && self.get(x - 1, y) == &PixelType::Color {
+            count += 1;
+        }
+        if y > 0 && self.get(x, y - 1) == &PixelType::Color {
+            count += 1;
+        }
+        if x < self.width - 1 && self.get(x + 1, y) == &PixelType::Color {
+            count += 1;
+        }
+        if y < self.height - 1 && self.get(x, y + 1) == &PixelType::Color {
+            count += 1;
+        }
+        count
+    }
+
+    fn generate_random(width: usize, height: usize) -> PixelMap {
         let mut rng = rand::thread_rng();
         let mut data = vec![PixelType::Background; width * height];
         for elem in &mut data {
@@ -46,36 +67,19 @@ impl PixelMap {
                 let pixel = img.get_pixel_mut(x as u32, y as u32);
                 match self.get(x, y) {
                     PixelType::Background => {
-                        *pixel = image::Rgb([255, 255, 255]);
+                        *pixel = image::Rgb(WHITE);
                     }
                     PixelType::Color => {
-                        *pixel = image::Rgb([0, 255, 0]);
+                        *pixel = image::Rgb(GREEN);
                     }
                     PixelType::Outline => {
-                        *pixel = image::Rgb([0, 180, 0]);
+                        *pixel = image::Rgb(DARK_GREEN);
                     }
                 }
             }
         }
         img
     }
-}
-
-fn count_neighbors(state: &PixelMap, x: usize, y: usize) -> u16 {
-    let mut count = 0;
-    if x > 0 && state.get(x - 1, y) == &PixelType::Color {
-        count += 1;
-    }
-    if y > 0 && state.get(x, y - 1) == &PixelType::Color {
-        count += 1;
-    }
-    if x < state.width - 1 && state.get(x + 1, y) == &PixelType::Color {
-        count += 1;
-    }
-    if y < state.height - 1 && state.get(x, y + 1) == &PixelType::Color {
-        count += 1;
-    }
-    count
 }
 
 fn evolve(state: PixelMap) -> PixelMap {
@@ -86,7 +90,7 @@ fn evolve(state: PixelMap) -> PixelMap {
     for y in 0..state.height {
         for x in 0..state.width {
             let cell = state.get(x, y);
-            let neighbors = count_neighbors(&state, x, y);
+            let neighbors = state.count_neighbors(x, y);
             let evolved_cell = evolved_state.get_mut(x, y);
             *evolved_cell = if (cell == &PixelType::Background && neighbors <= 1)
                 || (cell == &PixelType::Color && (neighbors == 2 || neighbors == 3))
@@ -102,7 +106,7 @@ fn evolve(state: PixelMap) -> PixelMap {
 
 pub fn generate_sprite_map() -> PixelMap {
     // TODO: Remove magic numbers throughout the function
-    let mut pixel_map = PixelMap::generate(4, 8);
+    let mut pixel_map = PixelMap::generate_random(4, 8);
     pixel_map = evolve(evolve(pixel_map));
     // Grow 4x8 pixel map into 5x10 by adding borders on all directions except the mirror direction (left)
     // The new data vector will be constructed row by row
@@ -123,7 +127,7 @@ pub fn generate_sprite_map() -> PixelMap {
     for y in 0..pixel_map.height {
         for x in 0..pixel_map.width {
             let cell = pixel_map.get(x, y);
-            if cell == &PixelType::Background && count_neighbors(&pixel_map, x, y) > 0 {
+            if cell == &PixelType::Background && pixel_map.count_neighbors(x, y) > 0 {
                 *pixel_map.get_mut(x, y) = PixelType::Outline;
             }
         }
