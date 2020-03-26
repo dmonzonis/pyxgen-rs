@@ -1,10 +1,6 @@
 use image::{ImageBuffer, Rgb};
 use rand::seq::SliceRandom;
 
-const GREEN: [u8; 3] = [0, 255, 0];
-const DARK_GREEN: [u8; 3] = [0, 180, 0];
-const WHITE: [u8; 3] = [255, 255, 255];
-
 #[derive(Clone, Copy, PartialEq)]
 pub enum PixelType {
     Background,
@@ -60,20 +56,26 @@ impl PixelMap {
         &mut self.data[y * self.width + x]
     }
 
-    pub fn image(&self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+    pub fn image(
+        &self,
+        color: [u8; 3],
+        outline: [u8; 3],
+        background: [u8; 3],
+        transparency: bool,  // TODO: if true, set transparent background
+    ) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         let mut img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(self.width as u32, self.height as u32);
         for y in 0..self.height {
             for x in 0..self.width {
                 let pixel = img.get_pixel_mut(x as u32, y as u32);
                 match self.get(x, y) {
                     PixelType::Background => {
-                        *pixel = image::Rgb(WHITE);
+                        *pixel = image::Rgb(background);
                     }
                     PixelType::Color => {
-                        *pixel = image::Rgb(GREEN);
+                        *pixel = image::Rgb(color);
                     }
                     PixelType::Outline => {
-                        *pixel = image::Rgb(DARK_GREEN);
+                        *pixel = image::Rgb(outline);
                     }
                 }
             }
