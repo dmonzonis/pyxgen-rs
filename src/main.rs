@@ -2,10 +2,12 @@ mod filename;
 mod pixel_map;
 
 use clap::{value_t, values_t, App, Arg, ArgMatches};
+use std::cmp;
 
 const GREEN: [u8; 3] = [0, 255, 0];
-const DARK_GREEN: [u8; 3] = [0, 180, 0];
 const WHITE: [u8; 3] = [255, 255, 255];
+
+const OUTLINE_DARKEN_RATE: i16 = 90;
 
 fn convert_arg_to_rgb(matches: &ArgMatches, arg: &str, default: &[u8; 3]) -> [u8; 3] {
     // Will panic if color does not have at least length 3
@@ -48,9 +50,17 @@ fn main() {
 
     // Retrieve info from arguments
     let color = convert_arg_to_rgb(&matches, "color", &GREEN);
-    // TODO: if outline is not set, use a darker version of color
-    let outline = convert_arg_to_rgb(&matches, "outline", &DARK_GREEN);
     let background = convert_arg_to_rgb(&matches, "background", &WHITE);
+    let outline = match values_t!(matches, "outline", u8) {
+        Ok(rgb) => [rgb[0], rgb[1], rgb[2]],
+        Err(_) => {
+            let mut darkened: [u8; 3] = [0; 3];
+             for (i, val) in darkened.iter_mut().enumerate() {
+                 *val = cmp::max(color[i] as i16 - OUTLINE_DARKEN_RATE, 0) as u8;
+             }
+             darkened
+        }
+    };
     let transparency = value_t!(matches, "transparency", bool).unwrap_or(false);
 
     let img = pixel_map::generate_sprite_map().image(color, outline, background, transparency);
